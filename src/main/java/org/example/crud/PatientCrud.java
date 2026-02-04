@@ -1,7 +1,7 @@
 package org.example.crud;
 
 import org.example.model.Patient;
-import org.example.util.DB;
+import org.example.DB;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -12,12 +12,14 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PatientDao {
+public class PatientCrud {
 
     public List<Patient> findAll() {
-        String sql =
-                "SELECT id, first_name, last_name, birth_date, svnr, phone, reason, station_id " +
-                        "FROM patient ORDER BY id";
+        String sql = """
+                SELECT id, first_name, last_name, birth_date, svnr, phone, reason, station_id
+                FROM patient
+                ORDER BY id
+                """;
 
         List<Patient> list = new ArrayList<>();
 
@@ -51,9 +53,10 @@ public class PatientDao {
     }
 
     public void insert(Patient p) {
-        String sql =
-                "INSERT INTO patient (first_name, last_name, birth_date, svnr, phone, reason, station_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = """
+                INSERT INTO patient (first_name, last_name, birth_date, svnr, phone, reason, station_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
 
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -79,9 +82,11 @@ public class PatientDao {
     }
 
     public void update(Patient p) {
-        String sql =
-                "UPDATE patient SET first_name=?, last_name=?, birth_date=?, svnr=?, phone=?, reason=?, station_id=? " +
-                        "WHERE id=?";
+        String sql = """
+                UPDATE patient
+                SET first_name=?, last_name=?, birth_date=?, svnr=?, phone=?, reason=?, station_id=?
+                WHERE id=?
+                """;
 
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
