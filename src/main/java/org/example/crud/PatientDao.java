@@ -1,4 +1,4 @@
-package org.example.dao;
+package org.example.crud;
 
 import org.example.model.Patient;
 import org.example.util.DB;
