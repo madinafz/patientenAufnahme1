@@ -1,8 +1,11 @@
 package org.example;
 
+import org.w3c.dom.ls.LSOutput;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.SQLOutput;
 
 public class DB {
 
@@ -15,6 +18,7 @@ public class DB {
         public static Connection getConnection() throws SQLException {
             return DriverManager.getConnection(URL, USER, PASS);
         }
+        System.out.println("Hello");
 
 
 }
