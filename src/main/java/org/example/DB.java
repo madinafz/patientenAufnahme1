@@ -1,7 +1,5 @@
 package org.example;
 
-import org.w3c.dom.ls.LSOutput;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;

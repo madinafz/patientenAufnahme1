@@ -6,7 +6,9 @@ public class Station {
         private String name;
         private int maxBetten;
 
-        public Station(int id, String name, int maxBetten) {
+    public Station() {}
+
+    public Station(int id, String name, int maxBetten) {
             this.id = id;
             this.name = name;
             this.maxBetten = maxBetten;
