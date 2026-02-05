@@ -7,24 +7,36 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-    public class StationKontrolle {
+public class StationKontrolle {
 
-        private final StationCrud stationCrud = new StationCrud();
+    private final StationCrud crud = new StationCrud();
 
-        public List<Station> getAllStations() {
-            return stationCrud.findAll();
+    public List<Station> getAll() {
+        return crud.findAll();
+    }
+
+    // Optional: station_id -> station_name (für GUI)
+    public Map<Integer, String> getStationMap() {
+        List<Station> stations = crud.findAll();
+        Map<Integer, String> map = new HashMap<>();
+        for (Station s : stations) {
+            map.put(s.getId(), s.getName());
         }
+        return map;
+    }
 
-        // station_id -> stationsname
-        public Map<Integer, String> getStationMap() {
-            List<Station> stations = stationCrud.findAll();
-            Map<Integer, String> map = new HashMap<>();
+    // Optional: Suche ohne trim(): nur toLowerCase()
+    public List<Station> search(String query) {
+        String q = (query == null) ? "" : query.toLowerCase();
 
-            for (Station s : stations) {
-                map.put(s.getId(), s.getName());
-            }
-            return map;
+        List<Station> all = crud.findAll();
+        if (q.isEmpty()) return all;
+
+        List<Station> out = new java.util.ArrayList<>();
+        for (Station s : all) {
+            String name = s.getName();
+            if (name != null && name.toLowerCase().contains(q)) out.add(s);
         }
-
-
+        return out;
+    }
 }
