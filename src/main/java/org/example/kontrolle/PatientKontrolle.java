@@ -9,7 +9,7 @@ import java.util.List;
 
 public class PatientKontrolle {
 
-    System.out.println("Hello");
+    System.out.println("Hell");
     private final PatientCrud crud = new PatientCrud();
 
     public List<Patient> getAll() {
