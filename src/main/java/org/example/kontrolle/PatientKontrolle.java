@@ -9,7 +9,6 @@ import java.util.List;
 
 public class PatientKontrolle {
 
-    System.out.println("Hell");
     private final PatientCrud crud = new PatientCrud();
 
     public List<Patient> getAll() {
@@ -19,7 +18,6 @@ public class PatientKontrolle {
     // Speichern: id <= 0 => insert, sonst update
     public void save(Patient p) {
         checkPatient(p);
-
         if (p.getId() <= 0) crud.insert(p);
         else crud.update(p);
     }
@@ -58,7 +56,9 @@ public class PatientKontrolle {
         return copy;
     }
 
-    // Validation ist hier drin (Option B)
+    // =========================
+    // Validation
+    // =========================
     private void checkPatient(Patient p) {
         if (p == null) throw new IllegalArgumentException("Patient ist null");
 
@@ -66,14 +66,31 @@ public class PatientKontrolle {
         if (isBlank(p.getLastName())) throw new IllegalArgumentException("Nachname fehlt");
         if (p.getBirthDate() == null) throw new IllegalArgumentException("Geburtsdatum fehlt");
 
+        // --- SVNR: 10 Ziffern + letzte 6 Ziffern müssen TTMMJJ vom Geburtsdatum sein ---
         String svnr = p.getSvnr();
         if (isBlank(svnr) || !svnr.matches("\\d{10}")) {
             throw new IllegalArgumentException("SVNR muss 10 Ziffern haben");
         }
 
+        // letzte 6 Ziffern (Index 4..9)
+        String svnrDatePart = svnr.substring(4);
+
+        // Geburtsdatum -> TTMMJJ
+        String birthPart = String.format("%02d%02d%02d",
+                p.getBirthDate().getDayOfMonth(),
+                p.getBirthDate().getMonthValue(),
+                p.getBirthDate().getYear() % 100
+        );
+
+        if (!svnrDatePart.equals(birthPart)) {
+            throw new IllegalArgumentException("SVNR stimmt nicht mit dem Geburtsdatum überein (TTMMJJ)");
+        }
+
+        // --- Telefon: muss mit 0 ODER mit +Vorwahl beginnen ---
         String phone = p.getPhone();
-        if (!isBlank(phone) && !phone.matches("[0-9 +/()\\-]{6,20}")) {
-            throw new IllegalArgumentException("Telefonnummer ist ungültig");
+        if (!isBlank(phone) &&
+                !phone.matches("^(0[0-9][0-9 +/()\\-]{4,18}|\\+[1-9][0-9]{1,3}[0-9 +/()\\-]{4,18})$")) {
+            throw new IllegalArgumentException("Telefonnummer muss mit 0 oder mit internationaler Vorwahl (+..) beginnen");
         }
     }
 
