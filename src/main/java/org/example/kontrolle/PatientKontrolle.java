@@ -9,6 +9,7 @@ import java.util.List;
 
 public class PatientKontrolle {
 
+    System.out.println("Hello");
     private final PatientCrud crud = new PatientCrud();
 
     public List<Patient> getAll() {

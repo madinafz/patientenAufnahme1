@@ -14,6 +14,7 @@ public class StationKontrolle {
     public List<Station> getAll() {
         return crud.findAll();
     }
+    System.out.println("Hello");
 
     // Optional: station_id -> station_name (für GUI)
     public Map<Integer, String> getStationMap() {
