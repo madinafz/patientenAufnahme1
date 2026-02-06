@@ -3,36 +3,15 @@ package org.example.model;
 import java.time.LocalDate;
 
 public class Patient {
-
     private int id;
     private String firstName;
     private String lastName;
     private LocalDate birthDate;
     private String svnr;
     private String phone;
+    private String address;
     private String reason;
-    private Integer stationId; // kann null sein
-
-    public Patient() {}
-
-    public Patient(int id, String firstName, String lastName, LocalDate birthDate,
-                   String svnr, String phone, String reason, Integer stationId) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.birthDate = birthDate;
-        this.svnr = svnr;
-        this.phone = phone;
-        this.reason = reason;
-        this.stationId = stationId;
-    }
-
-    public Patient(String firstName, String lastName, LocalDate birthDate, String svnr) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.birthDate = birthDate;
-        this.svnr = svnr;
-    }
+    private Integer stationId;
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -52,14 +31,12 @@ public class Patient {
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
 
+    public String getAddress() { return address; }
+    public void setAddress(String address) { this.address = address; }
+
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
 
     public Integer getStationId() { return stationId; }
     public void setStationId(Integer stationId) { this.stationId = stationId; }
-
-    @Override
-    public String toString() {
-        return id + ": " + lastName + ", " + firstName + " (" + birthDate + ")";
-    }
 }

@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class PatientenAufnahme extends JFrame {
-
     private JPanel panel1;
     private JTextField tfSearch;
     private JButton suchenButton;
@@ -70,7 +69,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     private void loadTable(String query, boolean userInitiated) {
-        String q = (query == null) ? "" : query.trim();
+        String q = (query == null) ? "" : query;
 
         if (loadWorker != null && !loadWorker.isDone()) {
             pendingQuery = q;
@@ -82,12 +81,13 @@ public class PatientenAufnahme extends JFrame {
         setActionsEnabled(false);
 
         String cur = (taDetails == null ? "" : taDetails.getText());
-        if (cur == null || cur.isBlank() || !cur.startsWith("Bitte kurz warten")) {
+        if (cur == null || cur.isEmpty() || !cur.startsWith("Bitte kurz warten")) {
             showInfo("Daten werden geladen ...");
         }
 
         loadWorker = new SwingWorker<>() {
-            @Override protected List<Patient> doInBackground() {
+            @Override
+            protected List<Patient> doInBackground() {
                 if (stations == null || stations.isEmpty()) {
                     stations = sk.getAllStations();
                     stationMap = sk.getStationMap();
@@ -97,14 +97,15 @@ public class PatientenAufnahme extends JFrame {
                 return pk.search(q);
             }
 
-            @Override protected void done() {
+            @Override
+            protected void done() {
                 try {
                     currentPatients = get();
                     fillTable(currentPatients);
                     clearInfo();
 
                     boolean isEmpty = currentPatients.isEmpty();
-                    if (isEmpty && firstLoadDone && userInitiated && !q.isBlank()) {
+                    if (isEmpty && firstLoadDone && userInitiated && !q.isEmpty()) {
                         showNotFoundWithCreate(q);
                     }
                     firstLoadDone = true;
@@ -121,6 +122,7 @@ public class PatientenAufnahme extends JFrame {
                 }
             }
         };
+
         loadWorker.execute();
     }
 
@@ -138,26 +140,29 @@ public class PatientenAufnahme extends JFrame {
         );
 
         if (choice == 0) {
-            String[] parts = q.trim().split("\\s+", 2);
+            String[] parts = q.split("\\s+", 2);
             prefillFirst = parts.length > 0 ? parts[0] : "";
-            prefillLast  = parts.length > 1 ? parts[1] : "";
+            prefillLast = parts.length > 1 ? parts[1] : "";
             createPatient();
         }
     }
 
     private void fillTable(List<Patient> patients) {
-        String[] cols = {"ID", "Nachname", "Vorname", "Geburtsdatum", "SVNR", "Station", "Grund"};
+        String[] cols = {"Patient-ID", "Raum", "Nachname", "Vorname", "Geburtsdatum", "SVNR", "Telefon", "Adresse", "Station", "Grund"};
         Object[][] rows = new Object[patients.size()][cols.length];
 
         for (int i = 0; i < patients.size(); i++) {
             Patient p = patients.get(i);
             rows[i][0] = p.getId();
-            rows[i][1] = p.getLastName();
-            rows[i][2] = p.getFirstName();
-            rows[i][3] = p.getBirthDate();
-            rows[i][4] = p.getSvnr();
-            rows[i][5] = (p.getStationId() == null) ? "" : stationMap.getOrDefault(p.getStationId(), "");
-            rows[i][6] = p.getReason();
+            rows[i][1] = (p.getStationId() == null) ? "" : p.getStationId();
+            rows[i][2] = p.getLastName();
+            rows[i][3] = p.getFirstName();
+            rows[i][4] = p.getBirthDate();
+            rows[i][5] = p.getSvnr();
+            rows[i][6] = p.getPhone();
+            rows[i][7] = p.getAddress();
+            rows[i][8] = (p.getStationId() == null) ? "" : stationMap.getOrDefault(p.getStationId(), "");
+            rows[i][9] = p.getReason();
         }
 
         tblPatients.setModel(new DefaultTableModel(rows, cols) {
@@ -167,32 +172,36 @@ public class PatientenAufnahme extends JFrame {
 
     private void showDetails(Patient p) {
         taDetails.setText(
-                "ID: " + p.getId() + "\n" +
+                "Patient-ID: " + p.getId() + "\n" +
+                        "Raum: " + (p.getStationId() == null ? "" : p.getStationId()) + "\n" +
                         "Vorname: " + safe(p.getFirstName()) + "\n" +
                         "Nachname: " + safe(p.getLastName()) + "\n" +
                         "Geburtsdatum: " + p.getBirthDate() + "\n" +
                         "SVNR: " + safe(p.getSvnr()) + "\n" +
                         "Telefon: " + safe(p.getPhone()) + "\n" +
-                        "Grund: " + safe(p.getReason()) + "\n" +
-                        "Station: " + (p.getStationId() == null ? "" : stationMap.getOrDefault(p.getStationId(), ""))
+                        "Adresse: " + safe(p.getAddress()) + "\n" +
+                        "Station: " + (p.getStationId() == null ? "" : stationMap.getOrDefault(p.getStationId(), "")) + "\n" +
+                        "Grund: " + safe(p.getReason())
         );
     }
 
     private void createPatient() {
-        Patient p = showPatientDialogLoop(null);   // ✅ bleibt offen bis korrekt
-        prefillFirst = ""; prefillLast = "";
+        Patient p = showPatientDialogLoop(null);
+        prefillFirst = "";
+        prefillLast = "";
         if (p == null) return;
 
-        runDbAction("Patient wird angelegt ...",
+        runDbAction(
+                "Patient wird angelegt ...",
                 () -> pk.save(p),
                 () -> {
                     showInfo("Erfolg: Patient wurde erfolgreich angelegt.");
                     JOptionPane.showMessageDialog(this, "Patient wurde erfolgreich angelegt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
-
                     showInfo("Bitte kurz warten – Liste wird aktualisiert ...");
                     tfSearch.setText("");
                     loadTable("", false);
-                });
+                }
+        );
     }
 
     private void editSelectedPatient() {
@@ -204,12 +213,14 @@ public class PatientenAufnahme extends JFrame {
 
         updated.setId(old.getId());
 
-        runDbAction("Patient wird gespeichert ...",
+        runDbAction(
+                "Patient wird gespeichert ...",
                 () -> pk.save(updated),
                 () -> {
                     JOptionPane.showMessageDialog(this, "Änderungen wurden erfolgreich gespeichert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                     loadTable(tfSearch.getText(), true);
-                });
+                }
+        );
     }
 
     private void deleteSelectedPatient() {
@@ -225,12 +236,14 @@ public class PatientenAufnahme extends JFrame {
         );
         if (ok != JOptionPane.YES_OPTION) return;
 
-        runDbAction("Patient wird gelöscht ...",
+        runDbAction(
+                "Patient wird gelöscht ...",
                 () -> pk.delete(p.getId()),
                 () -> {
                     JOptionPane.showMessageDialog(this, "Patient wurde gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                     loadTable(tfSearch.getText(), true);
-                });
+                }
+        );
     }
 
     private Patient getSelectedPatientOrWarn() {
@@ -247,10 +260,7 @@ public class PatientenAufnahme extends JFrame {
         showInfo(infoText);
 
         new SwingWorker<Void, Void>() {
-            @Override protected Void doInBackground() {
-                dbWork.run();
-                return null;
-            }
+            @Override protected Void doInBackground() { dbWork.run(); return null; }
 
             @Override protected void done() {
                 try {
@@ -259,7 +269,6 @@ public class PatientenAufnahme extends JFrame {
                 } catch (Exception ex) {
                     Throwable cause = unwrap(ex);
                     if (cause instanceof IllegalArgumentException) {
-                        // ✅ Eingabe-Fehler: Info-Feld nicht „patient wird angelegt…“ stehen lassen
                         showInfo("Eingabe fehlerhaft – bitte korrigieren.");
                         JOptionPane.showMessageDialog(
                                 PatientenAufnahme.this,
@@ -277,28 +286,25 @@ public class PatientenAufnahme extends JFrame {
         }.execute();
     }
 
-    // ✅ Dialog bleibt offen bis ok (Validierung ohne DB)
     private Patient showPatientDialogLoop(Patient existing) {
         if (stations == null || stations.isEmpty()) {
             stations = sk.getAllStations();
             stationMap = sk.getStationMap();
         }
 
-        // Felder einmal anlegen (bleiben bei Fehler erhalten)
         JTextField tfFirst = new JTextField(existing != null ? safe(existing.getFirstName()) : safe(prefillFirst));
         JTextField tfLast  = new JTextField(existing != null ? safe(existing.getLastName())  : safe(prefillLast));
-
         JFormattedTextField tfBirth = createBirthField(existing);
 
-        JTextField tfSvnr  = new JTextField(existing == null ? "" : safe(existing.getSvnr()));
+        JTextField tfSvnr = new JTextField(existing == null ? "" : safe(existing.getSvnr()));
         ((AbstractDocument) tfSvnr.getDocument()).setDocumentFilter(new SvnrDocumentFilter());
 
-        String startPhone = (existing != null && existing.getPhone() != null && !existing.getPhone().isBlank())
-                ? existing.getPhone() : "+";
+        String startPhone = (existing != null && existing.getPhone() != null && !existing.getPhone().isEmpty()) ? existing.getPhone() : "+";
         JTextField tfPhone = new JTextField(startPhone);
         ((AbstractDocument) tfPhone.getDocument()).setDocumentFilter(new PlusDigitsFilter(13));
 
         JTextField tfReason = new JTextField(existing == null ? "" : safe(existing.getReason()));
+        JTextField tfAddress = new JTextField(existing == null ? "" : safe(existing.getAddress()));
 
         JComboBox<Station> cbStation = new JComboBox<>();
         for (Station s : stations) {
@@ -307,7 +313,7 @@ public class PatientenAufnahme extends JFrame {
 
         if (existing != null && existing.getStationId() != null) {
             for (int i = 0; i < cbStation.getItemCount(); i++) {
-                if (cbStation.getItemAt(i).getId() == existing.getStationId()) {
+                if (cbStation.getItemAt(i).getRaum() == existing.getStationId()) {
                     cbStation.setSelectedIndex(i);
                     break;
                 }
@@ -319,7 +325,8 @@ public class PatientenAufnahme extends JFrame {
         p.add(new JLabel("Nachname:")); p.add(tfLast);
         p.add(new JLabel("Geburtsdatum (YYYY-MM-DD):")); p.add(tfBirth);
         p.add(new JLabel("SVNR (10 Ziffern):")); p.add(tfSvnr);
-        p.add(new JLabel("Telefon (beginnt mit +):")); p.add(tfPhone);
+        p.add(new JLabel("Telefon:")); p.add(tfPhone);
+        p.add(new JLabel("Adresse:")); p.add(tfAddress);
         p.add(new JLabel("Grund:")); p.add(tfReason);
         p.add(new JLabel("Station:")); p.add(cbStation);
 
@@ -336,30 +343,30 @@ public class PatientenAufnahme extends JFrame {
                 Patient out = new Patient();
                 out.setFirstName(tfFirst.getText());
                 out.setLastName(tfLast.getText());
-                out.setBirthDate(LocalDate.parse(tfBirth.getText()));
+                out.setBirthDate(parseBirthSafe(tfBirth.getText()));
                 out.setSvnr(tfSvnr.getText());
                 out.setPhone(tfPhone.getText());
+                out.setAddress(tfAddress.getText());
                 out.setReason(tfReason.getText());
+
                 Station sel = (Station) cbStation.getSelectedItem();
-                if (sel != null) out.setStationId(sel.getId());
+                if (sel != null) out.setStationId(sel.getRaum());
 
-                // ✅ nur prüfen (keine DB), damit der Dialog offen bleiben kann
                 pk.validateOnly(out);
-
-                return out; // ✅ alles ok -> Dialog schließen
+                return out;
 
             } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte korrigieren:\n" + ex.getMessage(),
-                        "Eingabe fehlerhaft",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte korrigieren:\n" + ex.getMessage(), "Eingabe fehlerhaft", JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Eingaben sind nicht korrekt. Bitte nochmals prüfen.",
-                        "Eingabe fehlerhaft",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Eingaben sind nicht korrekt.", "Eingabe fehlerhaft", JOptionPane.INFORMATION_MESSAGE);
             }
         }
+    }
+
+    private LocalDate parseBirthSafe(String s) {
+        if (s == null) return null;
+        if (s.isEmpty() || s.contains("_")) return null;
+        try { return LocalDate.parse(s); } catch (Exception e) { return null; }
     }
 
     private JFormattedTextField createBirthField(Patient existing) {
@@ -367,10 +374,7 @@ public class PatientenAufnahme extends JFrame {
             MaskFormatter mf = new MaskFormatter("####-##-##");
             mf.setPlaceholderCharacter('_');
             JFormattedTextField tf = new JFormattedTextField(mf);
-
-            String val = (existing == null || existing.getBirthDate() == null)
-                    ? "2000-01-01"
-                    : existing.getBirthDate().toString();
+            String val = (existing == null || existing.getBirthDate() == null) ? "2000-01-01" : existing.getBirthDate().toString();
             tf.setText(val);
             return tf;
         } catch (ParseException e) {
@@ -386,10 +390,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     private void showDbError(String userText, Throwable ex) {
-        JOptionPane.showMessageDialog(this,
-                userText + "\n\nBitte Datenbank-Verbindung prüfen und erneut versuchen.",
-                "Datenbank-Problem",
-                JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, userText + "\n\nBitte Datenbank-Verbindung prüfen.", "Datenbank-Problem", JOptionPane.ERROR_MESSAGE);
         showInfo("Datenbank-Problem – Verbindung prüfen.");
     }
 

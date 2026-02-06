@@ -4,7 +4,6 @@ import org.example.DB;
 import org.example.model.Patient;
 
 import java.sql.*;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +20,8 @@ public class PatientCrud {
 
         p.setSvnr(rs.getString("svnr"));
         p.setPhone(rs.getString("phone"));
-        p.setReason(rs.getString("reason")); // ✅ DAS war oft der Grund warum’s in der GUI leer war
+        p.setAddress(rs.getString("address"));
+        p.setReason(rs.getString("reason"));
 
         int st = rs.getInt("station_id");
         p.setStationId(rs.wasNull() ? null : st);
@@ -31,7 +31,7 @@ public class PatientCrud {
 
     public List<Patient> findAll() {
         String sql = """
-                SELECT id, first_name, last_name, birth_date, svnr, phone, reason, station_id
+                SELECT id, first_name, last_name, birth_date, svnr, phone, address, reason, station_id
                 FROM patient
                 ORDER BY last_name, first_name
                 """;
@@ -44,24 +44,24 @@ public class PatientCrud {
             while (rs.next()) out.add(mapRow(rs));
             return out;
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             throw new RuntimeException("Patienten konnten nicht geladen werden.", e);
         }
     }
 
-    // ✅ schneller als: findAll() + in Java filtern
-    public List<Patient> search(String query) {
-        String q = (query == null) ? "" : query.trim();
-        if (q.isEmpty()) return findAll();
+    public List<Patient> search(String q) {
+        String query = (q == null) ? "" : q.toLowerCase();
+        if (query.isEmpty()) return findAll();
 
-        String like = "%" + q.toLowerCase() + "%";
+        String like = "%" + query + "%";
         String sql = """
-                SELECT id, first_name, last_name, birth_date, svnr, phone, reason, station_id
+                SELECT id, first_name, last_name, birth_date, svnr, phone, address, reason, station_id
                 FROM patient
                 WHERE LOWER(first_name) LIKE ?
                    OR LOWER(last_name) LIKE ?
-                   OR LOWER(svnr) LIKE ?
-                   OR LOWER(phone) LIKE ?
+                   OR svnr LIKE ?
+                   OR phone LIKE ?
+                   OR LOWER(address) LIKE ?
                    OR LOWER(reason) LIKE ?
                 ORDER BY last_name, first_name
                 """;
@@ -70,22 +70,27 @@ public class PatientCrud {
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
 
-            for (int i = 1; i <= 5; i++) ps.setString(i, like);
+            ps.setString(1, like);
+            ps.setString(2, like);
+            ps.setString(3, like);
+            ps.setString(4, like);
+            ps.setString(5, like);
+            ps.setString(6, like);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) out.add(mapRow(rs));
             }
             return out;
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             throw new RuntimeException("Suche konnte nicht durchgeführt werden.", e);
         }
     }
 
     public void insert(Patient p) {
         String sql = """
-                INSERT INTO patient (first_name, last_name, birth_date, svnr, phone, reason, station_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO patient (first_name, last_name, birth_date, svnr, phone, address, reason, station_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         try (Connection con = DB.getConnection();
@@ -96,9 +101,11 @@ public class PatientCrud {
             ps.setDate(3, p.getBirthDate() == null ? null : Date.valueOf(p.getBirthDate()));
             ps.setString(4, p.getSvnr());
             ps.setString(5, p.getPhone());
-            ps.setString(6, p.getReason());
-            if (p.getStationId() == null) ps.setNull(7, Types.INTEGER);
-            else ps.setInt(7, p.getStationId());
+            ps.setString(6, p.getAddress());
+            ps.setString(7, p.getReason());
+
+            if (p.getStationId() == null) ps.setNull(8, Types.INTEGER);
+            else ps.setInt(8, p.getStationId());
 
             ps.executeUpdate();
 
@@ -106,7 +113,7 @@ public class PatientCrud {
                 if (keys.next()) p.setId(keys.getInt(1));
             }
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             throw new RuntimeException("Patient konnte nicht angelegt werden.", e);
         }
     }
@@ -114,7 +121,7 @@ public class PatientCrud {
     public void update(Patient p) {
         String sql = """
                 UPDATE patient
-                SET first_name=?, last_name=?, birth_date=?, svnr=?, phone=?, reason=?, station_id=?
+                SET first_name=?, last_name=?, birth_date=?, svnr=?, phone=?, address=?, reason=?, station_id=?
                 WHERE id=?
                 """;
 
@@ -126,14 +133,17 @@ public class PatientCrud {
             ps.setDate(3, p.getBirthDate() == null ? null : Date.valueOf(p.getBirthDate()));
             ps.setString(4, p.getSvnr());
             ps.setString(5, p.getPhone());
-            ps.setString(6, p.getReason());
-            if (p.getStationId() == null) ps.setNull(7, Types.INTEGER);
-            else ps.setInt(7, p.getStationId());
-            ps.setInt(8, p.getId());
+            ps.setString(6, p.getAddress());
+            ps.setString(7, p.getReason());
+
+            if (p.getStationId() == null) ps.setNull(8, Types.INTEGER);
+            else ps.setInt(8, p.getStationId());
+
+            ps.setInt(9, p.getId());
 
             ps.executeUpdate();
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             throw new RuntimeException("Patient konnte nicht gespeichert werden.", e);
         }
     }
@@ -142,9 +152,11 @@ public class PatientCrud {
         String sql = "DELETE FROM patient WHERE id=?";
         try (Connection con = DB.getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
+
             ps.setInt(1, id);
             ps.executeUpdate();
-        } catch (Exception e) {
+
+        } catch (SQLException e) {
             throw new RuntimeException("Patient konnte nicht gelöscht werden.", e);
         }
     }
