@@ -3,6 +3,7 @@ package org.example.kontrolle;
 import org.example.crud.PatientCrud;
 import org.example.model.Patient;
 
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -10,12 +11,22 @@ import java.util.List;
 public class PatientKontrolle {
 
     private final PatientCrud crud = new PatientCrud();
+    private static final DateTimeFormatter SVNR_DATE = DateTimeFormatter.ofPattern("ddMMyy");
 
-    public List<Patient> getAll() {
-        return crud.findAll();
+    public List<Patient> getAll() { return crud.findAll(); }
+    public List<Patient> search(String query) { return crud.search(query); }
+
+    public List<Patient> sortByName(List<Patient> list) {
+        list.sort(Comparator.comparing((Patient p) -> safeLower(p.getLastName()))
+                .thenComparing(p -> safeLower(p.getFirstName())));
+        return list;
     }
 
-    // Speichern: id <= 0 => insert, sonst update
+    // ✅ NEU: nur validieren (ohne insert/update)
+    public void validateOnly(Patient p) {
+        checkPatient(p);
+    }
+
     public void save(Patient p) {
         checkPatient(p);
         if (p.getId() <= 0) crud.insert(p);
@@ -23,86 +34,53 @@ public class PatientKontrolle {
     }
 
     public void delete(int id) {
-        if (id <= 0) throw new IllegalArgumentException("Ungültige ID");
+        if (id <= 0) throw new IllegalArgumentException("Ungültige ID.");
         crud.deleteById(id);
     }
 
-    // Suche ohne trim(): nur toLowerCase()
-    public List<Patient> search(String query) {
-        String q = (query == null) ? "" : query.toLowerCase();
-
-        List<Patient> all = crud.findAll();
-        if (q.isEmpty()) return all;
-
-        List<Patient> out = new ArrayList<>();
-        for (Patient p : all) {
-            if (contains(p.getFirstName(), q) ||
-                    contains(p.getLastName(), q) ||
-                    contains(p.getSvnr(), q) ||
-                    contains(p.getPhone(), q) ||
-                    contains(p.getReason(), q)) {
-                out.add(p);
-            }
-        }
-        return out;
-    }
-
-    // Sortieren: Nachname, dann Vorname
-    public List<Patient> sortByName(List<Patient> list) {
-        List<Patient> copy = new ArrayList<>(list);
-        copy.sort(Comparator
-                .comparing((Patient p) -> safe(p.getLastName()))
-                .thenComparing(p -> safe(p.getFirstName())));
-        return copy;
-    }
-
-    // =========================
-    // Validation
-    // =========================
     private void checkPatient(Patient p) {
-        if (p == null) throw new IllegalArgumentException("Patient ist null");
+        if (p == null) throw new IllegalArgumentException("Patientendaten fehlen.");
 
-        if (isBlank(p.getFirstName())) throw new IllegalArgumentException("Vorname fehlt");
-        if (isBlank(p.getLastName())) throw new IllegalArgumentException("Nachname fehlt");
-        if (p.getBirthDate() == null) throw new IllegalArgumentException("Geburtsdatum fehlt");
+        List<String> errors = new ArrayList<>();
 
-        // --- SVNR: 10 Ziffern + letzte 6 Ziffern müssen TTMMJJ vom Geburtsdatum sein ---
+        p.setFirstName(capitalize(p.getFirstName()));
+        p.setLastName(capitalize(p.getLastName()));
+
+        if (isBlank(p.getFirstName())) errors.add("Vorname fehlt.");
+        if (isBlank(p.getLastName())) errors.add("Nachname fehlt.");
+        if (p.getBirthDate() == null) errors.add("Geburtsdatum fehlt.");
+        if (isBlank(p.getReason())) errors.add("Grund für Aufenthalt fehlt.");
+
         String svnr = p.getSvnr();
         if (isBlank(svnr) || !svnr.matches("\\d{10}")) {
-            throw new IllegalArgumentException("SVNR muss 10 Ziffern haben");
+            errors.add("SVNR muss genau 10 Ziffern haben.");
+        } else if (p.getBirthDate() != null) {
+            String expected = p.getBirthDate().format(SVNR_DATE);
+            String last6 = svnr.substring(4);
+            if (!last6.equals(expected)) {
+                errors.add("SVNR ungültig: letzte 6 Ziffern müssen dem Geburtsdatum (TTMMJJ) entsprechen.");
+            }
         }
 
-        // letzte 6 Ziffern (Index 4..9)
-        String svnrDatePart = svnr.substring(4);
-
-        // Geburtsdatum -> TTMMJJ
-        String birthPart = String.format("%02d%02d%02d",
-                p.getBirthDate().getDayOfMonth(),
-                p.getBirthDate().getMonthValue(),
-                p.getBirthDate().getYear() % 100
-        );
-
-        if (!svnrDatePart.equals(birthPart)) {
-            throw new IllegalArgumentException("SVNR stimmt nicht mit dem Geburtsdatum überein (TTMMJJ)");
-        }
-
-        // --- Telefon: muss mit 0 ODER mit +Vorwahl beginnen ---
         String phone = p.getPhone();
-        if (!isBlank(phone) &&
-                !phone.matches("^(0[0-9][0-9 +/()\\-]{4,18}|\\+[1-9][0-9]{1,3}[0-9 +/()\\-]{4,18})$")) {
-            throw new IllegalArgumentException("Telefonnummer muss mit 0 oder mit internationaler Vorwahl (+..) beginnen");
+        if (isBlank(phone)) {
+            errors.add("Telefonnummer fehlt (muss mit + beginnen, z.B. +436641234567).");
+        } else if (!phone.matches("\\+\\d{9,12}")) { // 10–13 Zeichen gesamt
+            errors.add("Telefonnummer ungültig: muss mit + beginnen und 10–13 Zeichen lang sein (nur Ziffern nach +).");
         }
+
+        if (p.getStationId() == null) errors.add("Bitte eine Station auswählen.");
+
+        if (!errors.isEmpty()) throw new IllegalArgumentException(String.join("\n", errors));
     }
 
-    private boolean isBlank(String s) {
-        return s == null || s.isEmpty(); // ohne trim()
-    }
+    private boolean isBlank(String s) { return s == null || s.trim().isEmpty(); }
+    private String safeLower(String s) { return s == null ? "" : s.toLowerCase(); }
 
-    private boolean contains(String field, String q) {
-        return field != null && field.toLowerCase().contains(q);
-    }
-
-    private String safe(String s) {
-        return s == null ? "" : s.toLowerCase();
+    private String capitalize(String s) {
+        if (s == null) return "";
+        s = s.trim().toLowerCase();
+        if (s.isEmpty()) return "";
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

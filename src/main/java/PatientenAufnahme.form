@@ -10,7 +10,8 @@
       <splitpane id="5b087">
         <constraints border-constraint="Center"/>
         <properties>
-          <dividerLocation value="421"/>
+          <dividerLocation value="650"/>
+          <resizeWeight value="0.67"/>
         </properties>
         <border type="none"/>
         <children>
@@ -38,7 +39,7 @@
                   <component id="836ef" class="javax.swing.JTextField" binding="tfSearch">
                     <constraints>
                       <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                        <preferred-size width="3" height="3"/>
+                        <preferred-size width="400" height="28"/>
                       </grid>
                     </constraints>
                     <properties>
@@ -48,7 +49,7 @@
                   </component>
                   <component id="37668" class="javax.swing.JButton" binding="suchenButton" default-binding="true">
                     <constraints>
-                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
                       <text value="Suchen"/>
@@ -56,7 +57,7 @@
                   </component>
                   <component id="30159" class="javax.swing.JButton" binding="refresh">
                     <constraints>
-                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="3" hsize-policy="1" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
                       <text value="Refresh"/>

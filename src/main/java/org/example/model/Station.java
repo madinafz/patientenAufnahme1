@@ -1,27 +1,26 @@
 package org.example.model;
 
 public class Station {
+    // In DB heißt das Feld jetzt "Raum"
+    private final int raum;
+    private final String name;
+    private final int maxBetten;
 
-   private int id;
-        private String name;
-        private int maxBetten;
+    public Station(int raum, String name, int maxBetten) {
+        this.raum = raum;
+        this.name = name;
+        this.maxBetten = maxBetten;
+    }
 
-    public Station() {}
+    // ✅ damit euer restlicher Code (getId) NICHT überall geändert werden muss:
+    public int getId() { return raum; }          // id == raum (Alias)
+    public int getRaum() { return raum; }        // optional, falls ihr es explizit wollt
+    public String getName() { return name; }
+    public int getMaxBetten() { return maxBetten; }
 
-    public Station(int id, String name, int maxBetten) {
-            this.id = id;
-            this.name = name;
-            this.maxBetten = maxBetten;
-        }
-
-        public int getId() { return id; }
-        public void setId(int id) { this.id = id; }
-
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-
-        public int getMaxBetten() { return maxBetten; }
-        public void setMaxBetten(int maxBetten) { this.maxBetten = maxBetten; }
-
-
+    @Override
+    public String toString() {
+        // ✅ Dropdown zeigt jetzt "Raum - Name" (statt nur Name oder nur Zahl)
+        return raum + " - " + name;
+    }
 }
