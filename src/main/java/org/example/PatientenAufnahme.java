@@ -15,6 +15,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * Swing-GUI für die Patientenaufnahme.
+ * <p>
+ * Diese Klasse stellt das Hauptfenster der Anwendung dar. Sie ermöglicht:
+ * Patienten suchen/aktualisieren, Details anzeigen, neue Patienten anlegen,
+ * bestehende bearbeiten und löschen. Datenbankzugriffe werden dabei über
+ * {@link PatientKontrolle} und {@link StationKontrolle} gekapselt und laufen
+ * im Hintergrund via {@link SwingWorker}, damit die UI nicht blockiert.
+ * </p>
+ */
 public class PatientenAufnahme extends JFrame {
     private JPanel panel1;
     private JTextField tfSearch;
@@ -27,20 +37,59 @@ public class PatientenAufnahme extends JFrame {
     private JButton löschenButton;
     private JLabel Patient;
 
+    /**
+     * Kontrollschicht für Patientenoperationen inkl. Validierung und Speichern.
+     */
     private final PatientKontrolle pk = new PatientKontrolle();
+
+    /**
+     * Kontrollschicht für Stationsdaten (z.B. für Combobox/Anzeige).
+     */
     private final StationKontrolle sk = new StationKontrolle();
 
+    /**
+     * Aktuell geladene Patientenliste, passend zur Tabelle.
+     */
     private List<Patient> currentPatients = new ArrayList<>();
+
+    /**
+     * Map für schnelle Raum-/Stationsnamen-Auflösung: Raum -> Stationsname.
+     */
     private Map<Integer, String> stationMap = Map.of();
+
+    /**
+     * Liste aller Stationen (für Auswahl im Dialog).
+     */
     private List<Station> stations = new ArrayList<>();
 
+    /**
+     * Worker zum Laden der Patientendaten, damit die UI nicht einfriert.
+     */
     private SwingWorker<List<Patient>, Void> loadWorker;
+
+    /**
+     * Merkt sich eine Suche, die während eines laufenden Loads eingegeben wurde.
+     */
     private String pendingQuery = null;
+
+    /**
+     * Wird verwendet, um „Nicht gefunden“-Logik erst ab dem zweiten Laden sinnvoll zu zeigen.
+     */
     private boolean firstLoadDone = false;
 
+    /**
+     * Vorbelegung für „Neu anlegen“, wenn ein Suchbegriff aus Vor- und Nachname bestand.
+     */
     private String prefillFirst = "";
+
+    /**
+     * Vorbelegung für „Neu anlegen“, wenn ein Suchbegriff aus Vor- und Nachname bestand.
+     */
     private String prefillLast = "";
 
+    /**
+     * Erstellt das Hauptfenster, initialisiert Listener und lädt initial die Tabelle.
+     */
     public PatientenAufnahme() {
         setTitle("Patientenaufnahme");
         setContentPane(panel1);
@@ -68,6 +117,16 @@ public class PatientenAufnahme extends JFrame {
         loadTable("", false);
     }
 
+    /**
+     * Lädt Patienten (und bei Bedarf Stationen) im Hintergrund und füllt danach die Tabelle.
+     * <p>
+     * Wenn gerade bereits ein Ladeprozess läuft, wird die gewünschte Suche als {@code pendingQuery}
+     * gespeichert und anschließend ausgeführt.
+     * </p>
+     *
+     * @param query Suchbegriff
+     * @param userInitiated {@code true}, wenn die Suche vom User ausgelöst wurde (für UI-Feedback)
+     */
     private void loadTable(String query, boolean userInitiated) {
         String q = (query == null) ? "" : query;
 
@@ -126,6 +185,15 @@ public class PatientenAufnahme extends JFrame {
         loadWorker.execute();
     }
 
+    /**
+     * Zeigt eine „Nicht gefunden“-Meldung und bietet optional an, den Patienten neu anzulegen.
+     * <p>
+     * Wenn „Neu anlegen“ gewählt wird, wird versucht den Suchbegriff in Vor-/Nachname zu splitten
+     * und als Vorbelegung im Dialog zu verwenden.
+     * </p>
+     *
+     * @param q Suchbegriff, der keine Treffer geliefert hat
+     */
     private void showNotFoundWithCreate(String q) {
         Object[] options = {"Neu anlegen", "OK"};
         int choice = JOptionPane.showOptionDialog(
@@ -147,6 +215,11 @@ public class PatientenAufnahme extends JFrame {
         }
     }
 
+    /**
+     * Befüllt die Patiententabelle mit den gegebenen Datensätzen.
+     *
+     * @param patients Patientenliste, die angezeigt werden soll
+     */
     private void fillTable(List<Patient> patients) {
         String[] cols = {"Patient-ID", "Raum", "Nachname", "Vorname", "Geburtsdatum", "SVNR", "Telefon", "Adresse", "Station", "Grund"};
         Object[][] rows = new Object[patients.size()][cols.length];
@@ -170,6 +243,11 @@ public class PatientenAufnahme extends JFrame {
         });
     }
 
+    /**
+     * Zeigt die Details eines Patienten im Detailbereich an.
+     *
+     * @param p Patient, dessen Daten angezeigt werden sollen
+     */
     private void showDetails(Patient p) {
         taDetails.setText(
                 "Patient-ID: " + p.getId() + "\n" +
@@ -185,6 +263,12 @@ public class PatientenAufnahme extends JFrame {
         );
     }
 
+    /**
+     * Startet den Dialog zum Anlegen eines neuen Patienten und speichert ihn danach.
+     * <p>
+     * Nach erfolgreichem Speichern wird die Liste neu geladen.
+     * </p>
+     */
     private void createPatient() {
         Patient p = showPatientDialogLoop(null);
         prefillFirst = "";
@@ -204,6 +288,9 @@ public class PatientenAufnahme extends JFrame {
         );
     }
 
+    /**
+     * Öffnet den Bearbeiten-Dialog für den aktuell ausgewählten Patienten und speichert die Änderungen.
+     */
     private void editSelectedPatient() {
         Patient old = getSelectedPatientOrWarn();
         if (old == null) return;
@@ -223,6 +310,9 @@ public class PatientenAufnahme extends JFrame {
         );
     }
 
+    /**
+     * Löscht den aktuell ausgewählten Patienten nach Bestätigung durch den User.
+     */
     private void deleteSelectedPatient() {
         Patient p = getSelectedPatientOrWarn();
         if (p == null) return;
@@ -246,6 +336,11 @@ public class PatientenAufnahme extends JFrame {
         );
     }
 
+    /**
+     * Holt den aktuell ausgewählten Patienten aus der Tabelle oder zeigt eine Hinweis-Meldung.
+     *
+     * @return ausgewählter Patient oder {@code null}, wenn nichts ausgewählt wurde
+     */
     private Patient getSelectedPatientOrWarn() {
         int row = tblPatients.getSelectedRow();
         if (row < 0 || row >= currentPatients.size()) {
@@ -255,6 +350,17 @@ public class PatientenAufnahme extends JFrame {
         return currentPatients.get(row);
     }
 
+    /**
+     * Führt eine Datenbankaktion im Hintergrund aus und verarbeitet danach das Ergebnis.
+     * <p>
+     * Fehler werden je nach Typ als Eingabefehler (Validierung) oder als Datenbankproblem
+     * behandelt. Während der Aktion werden Buttons deaktiviert, damit keine Mehrfachklicks passieren.
+     * </p>
+     *
+     * @param infoText Text, der während der Aktion angezeigt wird
+     * @param dbWork   eigentliche Arbeit (Insert/Update/Delete)
+     * @param onSuccess Callback nach erfolgreicher Ausführung
+     */
     private void runDbAction(String infoText, Runnable dbWork, Runnable onSuccess) {
         setActionsEnabled(false);
         showInfo(infoText);
@@ -286,6 +392,13 @@ public class PatientenAufnahme extends JFrame {
         }.execute();
     }
 
+    /**
+     * Öffnet den Eingabedialog zum Anlegen/Bearbeiten und bleibt so lange in einer Schleife,
+     * bis gültige Eingaben gemacht wurden oder der User abbricht.
+     *
+     * @param existing bestehender Patient (bei Bearbeiten) oder {@code null} (bei Neu anlegen)
+     * @return validierter Patient oder {@code null} bei Abbruch
+     */
     private Patient showPatientDialogLoop(Patient existing) {
         if (stations == null || stations.isEmpty()) {
             stations = sk.getAllStations();
@@ -363,12 +476,31 @@ public class PatientenAufnahme extends JFrame {
         }
     }
 
+    /**
+     * Parst ein Geburtsdatum aus dem Textfeld.
+     * <p>
+     * Gibt {@code null} zurück, wenn der Text leer ist, Platzhalter enthält oder nicht geparst werden kann.
+     * </p>
+     *
+     * @param s Text aus dem Eingabefeld
+     * @return {@link LocalDate} oder {@code null}, wenn ungültig
+     */
     private LocalDate parseBirthSafe(String s) {
         if (s == null) return null;
         if (s.isEmpty() || s.contains("_")) return null;
         try { return LocalDate.parse(s); } catch (Exception e) { return null; }
     }
 
+    /**
+     * Erstellt ein formatiertes Eingabefeld für das Geburtsdatum (YYYY-MM-DD).
+     * <p>
+     * Es wird eine Maskierung verwendet, damit das Format eingehalten wird.
+     * Als Default wird bei Neuanlage ein Standarddatum gesetzt.
+     * </p>
+     *
+     * @param existing bestehender Patient (kann {@code null} sein)
+     * @return formatiertes Textfeld für das Geburtsdatum
+     */
     private JFormattedTextField createBirthField(Patient existing) {
         try {
             MaskFormatter mf = new MaskFormatter("####-##-##");
@@ -384,19 +516,45 @@ public class PatientenAufnahme extends JFrame {
         }
     }
 
+    /**
+     * Holt die eigentliche Ursache aus einer Exception (z.B. aus {@link ExecutionException}).
+     *
+     * @param ex Exception aus einem Worker
+     * @return Ursache, falls vorhanden, sonst die Exception selbst
+     */
     private Throwable unwrap(Exception ex) {
         if (ex instanceof ExecutionException && ex.getCause() != null) return ex.getCause();
         return ex;
     }
 
+    /**
+     * Zeigt eine standardisierte Datenbank-Fehlermeldung an.
+     *
+     * @param userText Text für den Benutzer
+     * @param ex       technische Ursache (wird nicht direkt angezeigt, aber für Logging/Debugging relevant)
+     */
     private void showDbError(String userText, Throwable ex) {
         JOptionPane.showMessageDialog(this, userText + "\n\nBitte Datenbank-Verbindung prüfen.", "Datenbank-Problem", JOptionPane.ERROR_MESSAGE);
         showInfo("Datenbank-Problem – Verbindung prüfen.");
     }
 
+    /**
+     * Zeigt einen Info-Text im Detailbereich an.
+     *
+     * @param text Text, der angezeigt werden soll
+     */
     private void showInfo(String text) { if (taDetails != null) taDetails.setText(text); }
+
+    /**
+     * Leert den Info-/Detailbereich.
+     */
     private void clearInfo() { if (taDetails != null) taDetails.setText(""); }
 
+    /**
+     * Aktiviert oder deaktiviert UI-Aktionen während laufender Lade- oder DB-Operationen.
+     *
+     * @param enabled {@code true} wenn Buttons klickbar sein sollen
+     */
     private void setActionsEnabled(boolean enabled) {
         tfSearch.setEnabled(true);
         suchenButton.setEnabled(enabled);
@@ -406,8 +564,17 @@ public class PatientenAufnahme extends JFrame {
         löschenButton.setEnabled(enabled);
     }
 
+    /**
+     * Liefert einen sicheren String zurück, damit in der UI keine {@code null}-Werte angezeigt werden.
+     *
+     * @param s Eingabestring
+     * @return leerer String bei {@code null}, sonst der String selbst
+     */
     private String safe(String s) { return s == null ? "" : s; }
 
+    /**
+     * Filtert die Eingabe für SVNR so, dass nur Ziffern erlaubt sind und maximal 10 Zeichen möglich sind.
+     */
     private static class SvnrDocumentFilter extends DocumentFilter {
         @Override public void insertString(FilterBypass fb, int o, String s, AttributeSet a) throws BadLocationException {
             if (s != null && s.matches("\\d+") && fb.getDocument().getLength() + s.length() <= 10) super.insertString(fb, o, s, a);
@@ -419,6 +586,10 @@ public class PatientenAufnahme extends JFrame {
         }
     }
 
+    /**
+     * Filtert die Eingabe für Telefonnummern, damit nur ein führendes '+' und danach nur Ziffern möglich sind.
+     * Zusätzlich wird eine maximale Länge erzwungen.
+     */
     private static class PlusDigitsFilter extends DocumentFilter {
         private final int maxLen;
         PlusDigitsFilter(int maxLen) { this.maxLen = maxLen; }
@@ -439,6 +610,12 @@ public class PatientenAufnahme extends JFrame {
             else java.awt.Toolkit.getDefaultToolkit().beep();
         }
 
+        /**
+         * Prüft, ob der gegebene String eine gültige Teil-Eingabe für eine Telefonnummer ist.
+         *
+         * @param s aktueller Inhalt nach der geplanten Änderung
+         * @return {@code true}, wenn gültig, sonst {@code false}
+         */
         private boolean isValid(String s) {
             if (s.length() > maxLen) return false;
             return s.isEmpty() || s.equals("+") || s.matches("\\+\\d*");
