@@ -8,22 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CRUD-Klasse für den Zugriff auf die Patiententabelle.
- * <p>
- * Diese Klasse kapselt alle grundlegenden Datenbank-Operationen für {@link Patient}:
+ * CRUD-Klasse für Patienten
  * Laden, Suchen, Einfügen, Aktualisieren und Löschen. Die Daten werden dabei zwischen
- * {@link ResultSet} und dem {@link Patient}-Objekt gemappt.
- * </p>
  */
 public class PatientCrud {
 
     /**
      * Erstellt aus der aktuellen Zeile im {@link ResultSet} ein {@link Patient}-Objekt.
      * <p>
-     * Dabei werden die Spaltenwerte aus dem ResultSet gelesen und in ein neues Patient-Objekt
-     * übernommen. Optional-Werte wie {@code birth_date} und {@code station_id} werden sauber
-     * auf {@code null} gesetzt, falls sie in der DB leer sind.
-     * </p>
+     * Spaltenwerte aus dem ResultSet gelesen und in ein neues Patient-Objekt übernommen.
      *
      * @param rs ResultSet, das bereits auf einer gültigen Zeile steht
      * @return gemapptes Patient-Objekt
@@ -51,11 +44,8 @@ public class PatientCrud {
     }
 
     /**
-     * Lädt alle Patienten aus der Datenbank.
-     * <p>
-     * Die Liste wird nach Nachname und Vorname sortiert zurückgegeben.
-     * </p>
-     *
+     * Lädt alle Patienten aus der DB
+     * Die Liste wird nach Nachname und Vorname sortiert zurückgegeben
      * @return Liste aller Patienten
      * @throws RuntimeException wenn die Patienten nicht geladen werden können
      */
@@ -80,14 +70,12 @@ public class PatientCrud {
     }
 
     /**
-     * Sucht Patienten anhand eines Suchbegriffs.
-     * <p>
-     * Es wird in mehreren Feldern gesucht (Vorname, Nachname, SVNR, Telefon, Adresse, Grund).
-     * Der Suchbegriff wird case-insensitive verarbeitet (über {@code LOWER(...)}).
-     * Wenn der Suchbegriff leer ist, wird {@link #findAll()} verwendet.
-     * </p>
+     * Sucht Patienten mit eines Suchbegriffs
+     * Es wird in mehreren Feldern gesucht (Vorname, Nachname, SVNR, Telefon, Adresse, Grund)
+     * er Suchbegriff wird case-insensitive verarbeitet
+     * wenn der Suchbegriff leer ist, wird verwendet.
      *
-     * @param q Suchbegriff (kann {@code null} oder leer sein)
+     * @param q Suchbegriff
      * @return Trefferliste der passenden Patienten
      * @throws RuntimeException wenn die Suche nicht durchgeführt werden kann
      */
@@ -130,11 +118,9 @@ public class PatientCrud {
     }
 
     /**
-     * Legt einen neuen Patienten in der Datenbank an.
-     * <p>
-     * Nach dem Insert wird die generierte ID aus den Generated Keys gelesen und in das
-     * übergebene {@link Patient}-Objekt zurückgeschrieben.
-     * </p>
+     * legt einen neuen Patienten in der DB an
+     * Nach dem Insert wird die generierte ID aus den generated K. gelesen und in das
+     * übergebene Patient-Objekt zurückgeschrieben
      *
      * @param p Patient-Objekt mit den zu speichernden Daten
      * @throws RuntimeException wenn der Patient nicht angelegt werden kann
@@ -171,14 +157,11 @@ public class PatientCrud {
     }
 
     /**
-     * Aktualisiert einen bestehenden Patienten in der Datenbank.
-     * <p>
-     * Es wird anhand der {@code id} aktualisiert. Felder wie {@code birth_date} oder
-     * {@code station_id} werden bei Bedarf auf {@code null} gesetzt, wenn sie im Objekt
-     * nicht befüllt sind.
-     * </p>
+     * Aktualisiert einen bestehenden Patienten in der DB
+     * Es wird aktualisiert. Felder wie GBdatum oder
+     * StationID werden auf null gesetzt, wenn sie im Objekt nicht befüllt sind.
      *
-     * @param p Patient-Objekt mit aktualisierten Daten (inkl. gesetzter ID)
+     * @param p Patient-Objekt mit aktualisierten Daten
      * @throws RuntimeException wenn der Patient nicht gespeichert werden kann
      */
     public void update(Patient p) {
@@ -213,7 +196,6 @@ public class PatientCrud {
 
     /**
      * Löscht einen Patienten anhand seiner ID.
-     *
      * @param id ID des zu löschenden Patienten
      * @throws RuntimeException wenn der Patient nicht gelöscht werden kann
      */

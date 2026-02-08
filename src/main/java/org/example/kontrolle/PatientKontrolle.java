@@ -9,31 +9,27 @@ import java.util.List;
 
 /**
  * Kontroll- und Validierungslogik für Patienten.
- * <p>
  * Diese Klasse liegt zwischen UI/Anwendung und Datenbankzugriff und übernimmt:
- * Validierung der Eingaben, Normalisierung von Textfeldern sowie das Weiterleiten
- * der CRUD-Operationen an {@link PatientCrud}.
- * </p>
+ * Validierung der Eingaben, Normalisierung von Textfeldern sowie das weiterleiten
+ * der CRUDoperationen
  */
 public class PatientKontrolle {
 
     /**
-     * Zugriffsschicht für Datenbankoperationen rund um Patienten.
+     * Zum Zugreifen für Datenbanken operationen rund um Patienten.
      */
     private final PatientCrud crud = new PatientCrud();
 
     /**
-     * Formatierer für die letzten 6 Stellen der SVNR anhand des Geburtsdatums (TTMMJJ).
+     * Formatiert für die letzten 6 Ziffern der SVNR anhand des Geburtsdatums
      */
     private static final DateTimeFormatter SVNR_DATE = DateTimeFormatter.ofPattern("ddMMyy");
 
     /**
-     * Führt eine Suche nach Patienten durch.
-     * <p>
-     * Die eigentliche Suche wird an {@link PatientCrud#search(String)} delegiert.
-     * </p>
+     * führt Suche nach Patienten durch.
+     * eigentliche Suche wird an PatientCrud weitergegeben.
      *
-     * @param query Suchbegriff (kann leer oder {@code null} sein)
+     * @param query Suchbegriff
      * @return Liste der gefundenen Patienten
      */
     public List<Patient> search(String query) {
@@ -41,13 +37,11 @@ public class PatientKontrolle {
     }
 
     /**
-     * Prüft einen Patienten nur auf Gültigkeit, ohne ihn zu speichern.
-     * <p>
-     * Diese Methode ist z.B. praktisch, wenn man vor dem Speichern in der UI
-     * nur die Fehlerliste sehen möchte.
-     * </p>
+     * Prüft einen Patienten nur auf Gültigkeit, ohne zu speichern
+     * Die Methode ist praktisch, wenn man vor dem Speichern in der UI
+     * nur Fehlerliste sehen möchte
      *
-     * @param p Patient-Objekt, das geprüft werden soll
+     * @param p Patient-Objekt, dass geprüft werden soll
      * @throws IllegalArgumentException wenn Validierungsfehler auftreten
      */
     public void validateOnly(Patient p) {
@@ -55,12 +49,10 @@ public class PatientKontrolle {
     }
 
     /**
-     * Speichert einen Patienten in der Datenbank.
-     * <p>
-     * Vor dem Speichern wird {@link #checkPatient(Patient)} aufgerufen.
-     * Wenn die ID noch nicht gesetzt ist (<= 0), wird ein Insert gemacht,
-     * ansonsten ein Update.
-     * </p>
+     * Speichert einen Patienten in der Datenbank
+     * Vor dem Speichern wird checkPatient(Patient) aufgerufe
+     * wenn ID noch nicht gesetzt ist (<= 0), wird Insert gemacht,
+     * sonst ein Update
      *
      * @param p Patient-Objekt mit den zu speichernden Daten
      * @throws IllegalArgumentException wenn Validierungsfehler auftreten
@@ -72,25 +64,22 @@ public class PatientKontrolle {
     }
 
     /**
-     * Löscht einen Patienten anhand seiner ID.
+     * Löscht einen Patienten wegen ID
      *
-     * @param id ID des zu löschenden Patienten
+     * @param id ID vom zu löschenden Patienten
      */
     public void delete(int id) {
         crud.deleteById(id);
     }
 
     /**
-     * Validiert und normalisiert die Patientendaten.
-     * <p>
-     * Es werden Pflichtfelder geprüft, einige Textfelder normalisiert (erster Buchstabe groß,
-     * Rest klein) und zusätzlich die SVNR sowie Telefonnummer anhand einfacher Regeln geprüft.
-     * Bei Fehlern werden alle Meldungen gesammelt und als {@link IllegalArgumentException}
-     * zurückgegeben.
-     * </p>
+     * Validiert und normalisiert die Patientendaten
+     * Es werden Pflichtfelder geprüft, einige Textfelder normalisiert (1.ster Buchstabe groß,
+     * Rest klein) und auch die SVNR sowie Telefonnummer anhand einfacher Regeln geprüft
+     * Bei Fehlern werden alle Meldungen gesammelt und zrk.gegeben
      *
      * @param p Patient-Objekt, das geprüft werden soll
-     * @throws IllegalArgumentException wenn der Patient {@code null} ist oder Validierungsfehler auftreten
+     * @throws IllegalArgumentException wenn der Patient null ist oder Validierungsfehler auftreten
      */
     private void checkPatient(Patient p) {
         if (p == null) throw new IllegalArgumentException("Patientendaten fehlen.");
@@ -131,21 +120,17 @@ public class PatientKontrolle {
     }
 
     /**
-     * Prüft, ob ein String leer ist (inklusive {@code null}).
-     *
+     * ürüft, ob ein String leer ist
      * @param s zu prüfender String
-     * @return {@code true}, wenn {@code null} oder leer, sonst {@code false}
+     * @return, wenn leer, entweder true oder false
      */
     private boolean isEmpty(String s) {
         return s == null || s.isEmpty();
     }
 
     /**
-     * Normalisiert einen Text so, dass der erste Buchstabe groß ist und der Rest klein.
-     * <p>
-     * Wenn der String {@code null} oder leer ist, wird ein leerer String zurückgegeben.
-     * </p>
-     *
+     * Schreibt einen Text so, dass der 1.ste Buchstabe groß ist und der Rest klein.
+     * Wenn der String nicht gespeichert oder leer ist, wird ein leerer String zurückgegeben.
      * @param s Eingabetext
      * @return normalisierte Schreibweise
      */

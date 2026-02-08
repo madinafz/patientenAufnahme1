@@ -17,7 +17,7 @@ public class Main {
     /**
      * Startmethode der Anwendung.
      *
-     * @param args Kommandozeilenargumente (werden hier nicht verwendet)
+     * @param args Kommandozeilenargumente
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new PatientenAufnahme().setVisible(true));
