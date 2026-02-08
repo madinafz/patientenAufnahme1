@@ -14,8 +14,6 @@ import java.util.List;
 public class PatientCrud {
 
     /**
-     * Erstellt aus der aktuellen Zeile im {@link ResultSet} ein {@link Patient}-Objekt.
-     * <p>
      * Spaltenwerte aus dem ResultSet gelesen und in ein neues Patient-Objekt übernommen.
      *
      * @param rs ResultSet, das bereits auf einer gültigen Zeile steht

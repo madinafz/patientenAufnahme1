@@ -6,11 +6,8 @@ import javax.swing.SwingUtilities;
 
 /**
  * Einstiegspunkt der Anwendung.
- * <p>
- * Startet die Swing-Oberfläche für die Patientenaufnahme. Der GUI-Start wird über
- * {@link SwingUtilities#invokeLater(Runnable)} in den Event-Dispatch-Thread gelegt,
- * damit Swing korrekt und thread-sicher initialisiert wird.
- * </p>
+ * Startet die Swing-Oberfläche für die Patientenaufnahme. Der GUI-Start wird über SwingUI
+ * in den Event-dispatch-Thread gelegt, damit Swing korrekt und thread-sicher initialisiert wird
  */
 public class Main {
 
