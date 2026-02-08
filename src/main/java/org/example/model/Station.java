@@ -1,7 +1,7 @@
 package org.example.model;
 
 /**
- * Modelklasse für eine Station.
+ * Modelklasse für eine Station
  * <p>
  * Eine Station wird hier über die Raumnummer, den Namen und die maximale Bettenanzahl beschrieben.
  * Die Klasse ist bewusst immutable aufgebaut (nur final Felder) und wird typischerweise für

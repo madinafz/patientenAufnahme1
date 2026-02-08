@@ -8,26 +8,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * CRUD-Klasse für den Zugriff auf die Stationstabelle.
- * <p>
+ * CRUD-Klasse für den Zugriff auf die Stationstabelle
  * Diese Klasse stellt aktuell nur eine Lese-Operation bereit, um alle Stationen aus der
- * Datenbank zu holen und als {@link Station}-Objekte zurückzugeben.
- * </p>
+ * Datenbank zu holen und als Objekte zurückzugeben
  */
 public class StationCrud {
 
     /**
      * Lädt alle Stationen aus der Datenbank.
-     * <p>
-     * Hinweis: In der SQL-Abfrage wird {@code Raum} als {@code id} aliasiert, damit bestehender
-     * Code, der eine ID erwartet, weiterhin funktioniert. Die Ergebnisliste wird nach Name sortiert.
-     * </p>
-     *
+     * Die Ergebnisliste wird nach Name sortiert.
      * @return Liste aller Stationen
      * @throws RuntimeException wenn die Stationen nicht geladen werden können
      */
     public List<Station> findAll() {
-        // ✅ Raum wird als id „gemappt“, damit alter Code weiter funktioniert
+        // Raum wird als id „gemappt“, damit alter Code weiter funktioniert
         String sql = "SELECT Raum AS id, name, max_betten FROM station ORDER BY name";
         List<Station> out = new ArrayList<>();
 

@@ -16,16 +16,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Swing-GUI für die Patientenaufnahme.
- * <p>
- * Diese Klasse stellt das Hauptfenster der Anwendung dar. Sie ermöglicht:
- * Patienten suchen/aktualisieren, Details anzeigen, neue Patienten anlegen,
- * bestehende bearbeiten und löschen. Datenbankzugriffe werden dabei über
- * {@link PatientKontrolle} und {@link StationKontrolle} gekapselt und laufen
- * im Hintergrund via {@link SwingWorker}, damit die UI nicht blockiert.
- * </p>
+ * Hauptfenster für die Patientenaufnahme.
+ * Man kann suchen, anzeigen, anlegen, bearbeiten und löschen.
  */
 public class PatientenAufnahme extends JFrame {
+
     private JPanel panel1;
     private JTextField tfSearch;
     private JButton suchenButton;
@@ -37,58 +32,22 @@ public class PatientenAufnahme extends JFrame {
     private JButton löschenButton;
     private JLabel Patient;
 
-    /**
-     * Kontrollschicht für Patientenoperationen inkl. Validierung und Speichern.
-     */
     private final PatientKontrolle pk = new PatientKontrolle();
-
-    /**
-     * Kontrollschicht für Stationsdaten (z.B. für Combobox/Anzeige).
-     */
     private final StationKontrolle sk = new StationKontrolle();
 
-    /**
-     * Aktuell geladene Patientenliste, passend zur Tabelle.
-     */
     private List<Patient> currentPatients = new ArrayList<>();
-
-    /**
-     * Map für schnelle Raum-/Stationsnamen-Auflösung: Raum -> Stationsname.
-     */
+    private List<Station> stations = new ArrayList<>();
     private Map<Integer, String> stationMap = Map.of();
 
-    /**
-     * Liste aller Stationen (für Auswahl im Dialog).
-     */
-    private List<Station> stations = new ArrayList<>();
-
-    /**
-     * Worker zum Laden der Patientendaten, damit die UI nicht einfriert.
-     */
     private SwingWorker<List<Patient>, Void> loadWorker;
-
-    /**
-     * Merkt sich eine Suche, die während eines laufenden Loads eingegeben wurde.
-     */
     private String pendingQuery = null;
 
-    /**
-     * Wird verwendet, um „Nicht gefunden“-Logik erst ab dem zweiten Laden sinnvoll zu zeigen.
-     */
     private boolean firstLoadDone = false;
-
-    /**
-     * Vorbelegung für „Neu anlegen“, wenn ein Suchbegriff aus Vor- und Nachname bestand.
-     */
     private String prefillFirst = "";
-
-    /**
-     * Vorbelegung für „Neu anlegen“, wenn ein Suchbegriff aus Vor- und Nachname bestand.
-     */
     private String prefillLast = "";
 
     /**
-     * Erstellt das Hauptfenster, initialisiert Listener und lädt initial die Tabelle.
+     * Baut das Fenster auf und lädt die Liste.
      */
     public PatientenAufnahme() {
         setTitle("Patientenaufnahme");
@@ -100,8 +59,11 @@ public class PatientenAufnahme extends JFrame {
         if (taDetails != null) taDetails.setEditable(false);
 
         suchenButton.addActionListener(e -> loadTable(tfSearch.getText(), true));
-        refresh.addActionListener(e -> { tfSearch.setText(""); loadTable("", false); });
         tfSearch.addActionListener(e -> loadTable(tfSearch.getText(), true));
+        refresh.addActionListener(e -> {
+            tfSearch.setText("");
+            loadTable("", false);
+        });
 
         anlegenButton.addActionListener(e -> createPatient());
         bearbeitenButton.addActionListener(e -> editSelectedPatient());
@@ -109,50 +71,34 @@ public class PatientenAufnahme extends JFrame {
 
         tblPatients.getSelectionModel().addListSelectionListener(e -> {
             if (e.getValueIsAdjusting()) return;
-            int row = tblPatients.getSelectedRow();
-            if (row < 0 || row >= currentPatients.size()) return;
-            showDetails(currentPatients.get(row));
+            Patient p = getSelectedPatientSilent();
+            if (p != null) showDetails(p);
         });
 
         loadTable("", false);
     }
 
     /**
-     * Lädt Patienten (und bei Bedarf Stationen) im Hintergrund und füllt danach die Tabelle.
-     * <p>
-     * Wenn gerade bereits ein Ladeprozess läuft, wird die gewünschte Suche als {@code pendingQuery}
-     * gespeichert und anschließend ausgeführt.
-     * </p>
-     *
-     * @param query Suchbegriff
-     * @param userInitiated {@code true}, wenn die Suche vom User ausgelöst wurde (für UI-Feedback)
+     * Lädt Patienten im Hintergrund und füllt die Tabelle.
+     * Wenn gerade geladen wird, wird die Suche gemerkt.
      */
     private void loadTable(String query, boolean userInitiated) {
-        String q = (query == null) ? "" : query;
+        String q = query == null ? "" : query;
 
         if (loadWorker != null && !loadWorker.isDone()) {
             pendingQuery = q;
-            showInfo("Daten werden geladen ...\nSuche wird danach ausgeführt: \"" + q + "\"");
+            showInfo("Daten werden geladen …\nSuche kommt danach: \"" + q + "\"");
             return;
         }
 
         pendingQuery = null;
         setActionsEnabled(false);
-
-        String cur = (taDetails == null ? "" : taDetails.getText());
-        if (cur == null || cur.isEmpty() || !cur.startsWith("Bitte kurz warten")) {
-            showInfo("Daten werden geladen ...");
-        }
+        showInfo("Daten werden geladen …");
 
         loadWorker = new SwingWorker<>() {
             @Override
             protected List<Patient> doInBackground() {
-                if (stations == null || stations.isEmpty()) {
-                    stations = sk.getAllStations();
-                    stationMap = sk.getStationMap();
-                } else if (stationMap == null || stationMap.isEmpty()) {
-                    stationMap = sk.getStationMap();
-                }
+                ensureStationsLoaded();
                 return pk.search(q);
             }
 
@@ -163,8 +109,7 @@ public class PatientenAufnahme extends JFrame {
                     fillTable(currentPatients);
                     clearInfo();
 
-                    boolean isEmpty = currentPatients.isEmpty();
-                    if (isEmpty && firstLoadDone && userInitiated && !q.isEmpty()) {
+                    if (currentPatients.isEmpty() && firstLoadDone && userInitiated && !q.isEmpty()) {
                         showNotFoundWithCreate(q);
                     }
                     firstLoadDone = true;
@@ -173,11 +118,7 @@ public class PatientenAufnahme extends JFrame {
                     showDbError("Daten konnten nicht geladen werden.", unwrap(ex));
                 } finally {
                     setActionsEnabled(true);
-                    if (pendingQuery != null) {
-                        String next = pendingQuery;
-                        pendingQuery = null;
-                        loadTable(next, true);
-                    }
+                    runPendingQuery();
                 }
             }
         };
@@ -186,13 +127,25 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Zeigt eine „Nicht gefunden“-Meldung und bietet optional an, den Patienten neu anzulegen.
-     * <p>
-     * Wenn „Neu anlegen“ gewählt wird, wird versucht den Suchbegriff in Vor-/Nachname zu splitten
-     * und als Vorbelegung im Dialog zu verwenden.
-     * </p>
-     *
-     * @param q Suchbegriff, der keine Treffer geliefert hat
+     * Lädt Stationen und die Map, wenn sie noch fehlen.
+     */
+    private void ensureStationsLoaded() {
+        if (stations == null || stations.isEmpty()) stations = sk.getAllStations();
+        if (stationMap == null || stationMap.isEmpty()) stationMap = sk.getStationMap();
+    }
+
+    /**
+     * Führt eine gemerkte Suche aus (nach dem Laden).
+     */
+    private void runPendingQuery() {
+        if (pendingQuery == null) return;
+        String next = pendingQuery;
+        pendingQuery = null;
+        loadTable(next, true);
+    }
+
+    /**
+     * Zeigt “Nicht gefunden” und bietet “Neu anlegen” an.
      */
     private void showNotFoundWithCreate(String q) {
         Object[] options = {"Neu anlegen", "OK"};
@@ -207,18 +160,16 @@ public class PatientenAufnahme extends JFrame {
                 options[0]
         );
 
-        if (choice == 0) {
-            String[] parts = q.split("\\s+", 2);
-            prefillFirst = parts.length > 0 ? parts[0] : "";
-            prefillLast = parts.length > 1 ? parts[1] : "";
-            createPatient();
-        }
+        if (choice != 0) return;
+
+        String[] parts = q.trim().split("\\s+", 2);
+        prefillFirst = parts.length > 0 ? parts[0] : "";
+        prefillLast = parts.length > 1 ? parts[1] : "";
+        createPatient();
     }
 
     /**
-     * Befüllt die Patiententabelle mit den gegebenen Datensätzen.
-     *
-     * @param patients Patientenliste, die angezeigt werden soll
+     * Schreibt alle Patienten in die Tabelle.
      */
     private void fillTable(List<Patient> patients) {
         String[] cols = {"Patient-ID", "Raum", "Nachname", "Vorname", "Geburtsdatum", "SVNR", "Telefon", "Adresse", "Station", "Grund"};
@@ -226,15 +177,17 @@ public class PatientenAufnahme extends JFrame {
 
         for (int i = 0; i < patients.size(); i++) {
             Patient p = patients.get(i);
+            Integer raum = p.getStationId();
+
             rows[i][0] = p.getId();
-            rows[i][1] = (p.getStationId() == null) ? "" : p.getStationId();
+            rows[i][1] = raum == null ? "" : raum;
             rows[i][2] = p.getLastName();
             rows[i][3] = p.getFirstName();
             rows[i][4] = p.getBirthDate();
             rows[i][5] = p.getSvnr();
             rows[i][6] = p.getPhone();
             rows[i][7] = p.getAddress();
-            rows[i][8] = (p.getStationId() == null) ? "" : stationMap.getOrDefault(p.getStationId(), "");
+            rows[i][8] = raum == null ? "" : stationMap.getOrDefault(raum, "");
             rows[i][9] = p.getReason();
         }
 
@@ -244,30 +197,27 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Zeigt die Details eines Patienten im Detailbereich an.
-     *
-     * @param p Patient, dessen Daten angezeigt werden sollen
+     * Zeigt die Details vom Patienten rechts an.
      */
     private void showDetails(Patient p) {
+        Integer raum = p.getStationId();
+
         taDetails.setText(
                 "Patient-ID: " + p.getId() + "\n" +
-                        "Raum: " + (p.getStationId() == null ? "" : p.getStationId()) + "\n" +
+                        "Raum: " + (raum == null ? "" : raum) + "\n" +
                         "Vorname: " + safe(p.getFirstName()) + "\n" +
                         "Nachname: " + safe(p.getLastName()) + "\n" +
                         "Geburtsdatum: " + p.getBirthDate() + "\n" +
                         "SVNR: " + safe(p.getSvnr()) + "\n" +
                         "Telefon: " + safe(p.getPhone()) + "\n" +
                         "Adresse: " + safe(p.getAddress()) + "\n" +
-                        "Station: " + (p.getStationId() == null ? "" : stationMap.getOrDefault(p.getStationId(), "")) + "\n" +
+                        "Station: " + (raum == null ? "" : stationMap.getOrDefault(raum, "")) + "\n" +
                         "Grund: " + safe(p.getReason())
         );
     }
 
     /**
-     * Startet den Dialog zum Anlegen eines neuen Patienten und speichert ihn danach.
-     * <p>
-     * Nach erfolgreichem Speichern wird die Liste neu geladen.
-     * </p>
+     * Öffnet den Dialog und legt einen Patienten an.
      */
     private void createPatient() {
         Patient p = showPatientDialogLoop(null);
@@ -276,12 +226,11 @@ public class PatientenAufnahme extends JFrame {
         if (p == null) return;
 
         runDbAction(
-                "Patient wird angelegt ...",
+                "Patient wird angelegt …",
                 () -> pk.save(p),
                 () -> {
-                    showInfo("Erfolg: Patient wurde erfolgreich angelegt.");
                     JOptionPane.showMessageDialog(this, "Patient wurde erfolgreich angelegt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
-                    showInfo("Bitte kurz warten – Liste wird aktualisiert ...");
+                    showInfo("Bitte kurz warten – Liste wird aktualisiert …");
                     tfSearch.setText("");
                     loadTable("", false);
                 }
@@ -289,7 +238,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Öffnet den Bearbeiten-Dialog für den aktuell ausgewählten Patienten und speichert die Änderungen.
+     * Öffnet den Dialog und speichert Änderungen.
      */
     private void editSelectedPatient() {
         Patient old = getSelectedPatientOrWarn();
@@ -301,17 +250,17 @@ public class PatientenAufnahme extends JFrame {
         updated.setId(old.getId());
 
         runDbAction(
-                "Patient wird gespeichert ...",
+                "Änderungen werden gespeichert …",
                 () -> pk.save(updated),
                 () -> {
-                    JOptionPane.showMessageDialog(this, "Änderungen wurden erfolgreich gespeichert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Änderungen wurden gespeichert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                     loadTable(tfSearch.getText(), true);
                 }
         );
     }
 
     /**
-     * Löscht den aktuell ausgewählten Patienten nach Bestätigung durch den User.
+     * Löscht den ausgewählten Patienten nach Bestätigung.
      */
     private void deleteSelectedPatient() {
         Patient p = getSelectedPatientOrWarn();
@@ -327,7 +276,7 @@ public class PatientenAufnahme extends JFrame {
         if (ok != JOptionPane.YES_OPTION) return;
 
         runDbAction(
-                "Patient wird gelöscht ...",
+                "Patient wird gelöscht …",
                 () -> pk.delete(p.getId()),
                 () -> {
                     JOptionPane.showMessageDialog(this, "Patient wurde gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
@@ -337,29 +286,35 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Holt den aktuell ausgewählten Patienten aus der Tabelle oder zeigt eine Hinweis-Meldung.
-     *
-     * @return ausgewählter Patient oder {@code null}, wenn nichts ausgewählt wurde
+     * Gibt den ausgewählten Patienten zurück.
+     * Wenn keiner gewählt ist, kommt eine Meldung.
      */
     private Patient getSelectedPatientOrWarn() {
+        Patient p = getSelectedPatientSilent();
+        if (p != null) return p;
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Bitte zuerst einen Patienten in der Tabelle auswählen.",
+                "Hinweis",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+        return null;
+    }
+
+    /**
+     * Gibt den ausgewählten Patienten zurück.
+     * Kein Popup, wenn nichts gewählt ist.
+     */
+    private Patient getSelectedPatientSilent() {
         int row = tblPatients.getSelectedRow();
-        if (row < 0 || row >= currentPatients.size()) {
-            JOptionPane.showMessageDialog(this, "Bitte zuerst einen Patienten in der Tabelle auswählen.", "Hinweis", JOptionPane.INFORMATION_MESSAGE);
-            return null;
-        }
+        if (row < 0 || row >= currentPatients.size()) return null;
         return currentPatients.get(row);
     }
 
     /**
-     * Führt eine Datenbankaktion im Hintergrund aus und verarbeitet danach das Ergebnis.
-     * <p>
-     * Fehler werden je nach Typ als Eingabefehler (Validierung) oder als Datenbankproblem
-     * behandelt. Während der Aktion werden Buttons deaktiviert, damit keine Mehrfachklicks passieren.
-     * </p>
-     *
-     * @param infoText Text, der während der Aktion angezeigt wird
-     * @param dbWork   eigentliche Arbeit (Insert/Update/Delete)
-     * @param onSuccess Callback nach erfolgreicher Ausführung
+     * Führt DB-Arbeit im Hintergrund aus.
+     * Zeigt bei Fehlern eine einfache Meldung.
      */
     private void runDbAction(String infoText, Runnable dbWork, Runnable onSuccess) {
         setActionsEnabled(false);
@@ -375,7 +330,7 @@ public class PatientenAufnahme extends JFrame {
                 } catch (Exception ex) {
                     Throwable cause = unwrap(ex);
                     if (cause instanceof IllegalArgumentException) {
-                        showInfo("Eingabe fehlerhaft – bitte korrigieren.");
+                        showInfo("Eingabe passt noch nicht – bitte korrigieren.");
                         JOptionPane.showMessageDialog(
                                 PatientenAufnahme.this,
                                 "Bitte prüfen:\n" + cause.getMessage(),
@@ -393,17 +348,11 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Öffnet den Eingabedialog zum Anlegen/Bearbeiten und bleibt so lange in einer Schleife,
-     * bis gültige Eingaben gemacht wurden oder der User abbricht.
-     *
-     * @param existing bestehender Patient (bei Bearbeiten) oder {@code null} (bei Neu anlegen)
-     * @return validierter Patient oder {@code null} bei Abbruch
+     * Zeigt den Dialog zum Anlegen/Bearbeiten.
+     * Wiederholt sich, bis es passt oder Abbruch.
      */
     private Patient showPatientDialogLoop(Patient existing) {
-        if (stations == null || stations.isEmpty()) {
-            stations = sk.getAllStations();
-            stationMap = sk.getStationMap();
-        }
+        ensureStationsLoaded();
 
         JTextField tfFirst = new JTextField(existing != null ? safe(existing.getFirstName()) : safe(prefillFirst));
         JTextField tfLast  = new JTextField(existing != null ? safe(existing.getLastName())  : safe(prefillLast));
@@ -419,19 +368,7 @@ public class PatientenAufnahme extends JFrame {
         JTextField tfReason = new JTextField(existing == null ? "" : safe(existing.getReason()));
         JTextField tfAddress = new JTextField(existing == null ? "" : safe(existing.getAddress()));
 
-        JComboBox<Station> cbStation = new JComboBox<>();
-        for (Station s : stations) {
-            if (s != null && s.getName() != null && !"test".equalsIgnoreCase(s.getName())) cbStation.addItem(s);
-        }
-
-        if (existing != null && existing.getStationId() != null) {
-            for (int i = 0; i < cbStation.getItemCount(); i++) {
-                if (cbStation.getItemAt(i).getRaum() == existing.getStationId()) {
-                    cbStation.setSelectedIndex(i);
-                    break;
-                }
-            }
-        }
+        JComboBox<Station> cbStation = buildStationCombo(existing);
 
         JPanel p = new JPanel(new java.awt.GridLayout(0, 2, 6, 6));
         p.add(new JLabel("Vorname:")); p.add(tfFirst);
@@ -477,13 +414,28 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Parst ein Geburtsdatum aus dem Textfeld.
-     * <p>
-     * Gibt {@code null} zurück, wenn der Text leer ist, Platzhalter enthält oder nicht geparst werden kann.
-     * </p>
-     *
-     * @param s Text aus dem Eingabefeld
-     * @return {@link LocalDate} oder {@code null}, wenn ungültig
+     * Baut die Stations-Combobox und wählt bei Bearbeiten vor.
+     */
+    private JComboBox<Station> buildStationCombo(Patient existing) {
+        JComboBox<Station> cb = new JComboBox<>();
+        for (Station s : stations) {
+            if (s != null && s.getName() != null && !"test".equalsIgnoreCase(s.getName())) cb.addItem(s);
+        }
+
+        if (existing != null && existing.getStationId() != null) {
+            for (int i = 0; i < cb.getItemCount(); i++) {
+                if (cb.getItemAt(i).getRaum() == existing.getStationId()) {
+                    cb.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+        return cb;
+    }
+
+    /**
+     * Liest das Datum aus dem Feld.
+     * Gibt null zurück, wenn es nicht passt.
      */
     private LocalDate parseBirthSafe(String s) {
         if (s == null) return null;
@@ -492,35 +444,28 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Erstellt ein formatiertes Eingabefeld für das Geburtsdatum (YYYY-MM-DD).
-     * <p>
-     * Es wird eine Maskierung verwendet, damit das Format eingehalten wird.
-     * Als Default wird bei Neuanlage ein Standarddatum gesetzt.
-     * </p>
-     *
-     * @param existing bestehender Patient (kann {@code null} sein)
-     * @return formatiertes Textfeld für das Geburtsdatum
+     * Baut das Datumsfeld mit Maske (YYYY-MM-DD).
      */
     private JFormattedTextField createBirthField(Patient existing) {
+        String val = (existing == null || existing.getBirthDate() == null)
+                ? "2000-01-01"
+                : existing.getBirthDate().toString();
+
         try {
             MaskFormatter mf = new MaskFormatter("####-##-##");
             mf.setPlaceholderCharacter('_');
             JFormattedTextField tf = new JFormattedTextField(mf);
-            String val = (existing == null || existing.getBirthDate() == null) ? "2000-01-01" : existing.getBirthDate().toString();
             tf.setText(val);
             return tf;
         } catch (ParseException e) {
             JFormattedTextField tf = new JFormattedTextField();
-            tf.setText(existing == null || existing.getBirthDate() == null ? "2000-01-01" : existing.getBirthDate().toString());
+            tf.setText(val);
             return tf;
         }
     }
 
     /**
-     * Holt die eigentliche Ursache aus einer Exception (z.B. aus {@link ExecutionException}).
-     *
-     * @param ex Exception aus einem Worker
-     * @return Ursache, falls vorhanden, sonst die Exception selbst
+     * Holt die eigentliche Ursache aus einer Exception.
      */
     private Throwable unwrap(Exception ex) {
         if (ex instanceof ExecutionException && ex.getCause() != null) return ex.getCause();
@@ -528,10 +473,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Zeigt eine standardisierte Datenbank-Fehlermeldung an.
-     *
-     * @param userText Text für den Benutzer
-     * @param ex       technische Ursache (wird nicht direkt angezeigt, aber für Logging/Debugging relevant)
+     * Zeigt eine DB-Fehlermeldung.
      */
     private void showDbError(String userText, Throwable ex) {
         JOptionPane.showMessageDialog(this, userText + "\n\nBitte Datenbank-Verbindung prüfen.", "Datenbank-Problem", JOptionPane.ERROR_MESSAGE);
@@ -539,21 +481,17 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Zeigt einen Info-Text im Detailbereich an.
-     *
-     * @param text Text, der angezeigt werden soll
+     * Zeigt Text im Detailfeld an.
      */
     private void showInfo(String text) { if (taDetails != null) taDetails.setText(text); }
 
     /**
-     * Leert den Info-/Detailbereich.
+     * Leert das Detailfeld.
      */
     private void clearInfo() { if (taDetails != null) taDetails.setText(""); }
 
     /**
-     * Aktiviert oder deaktiviert UI-Aktionen während laufender Lade- oder DB-Operationen.
-     *
-     * @param enabled {@code true} wenn Buttons klickbar sein sollen
+     * Aktiviert oder deaktiviert Buttons.
      */
     private void setActionsEnabled(boolean enabled) {
         tfSearch.setEnabled(true);
@@ -565,15 +503,12 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Liefert einen sicheren String zurück, damit in der UI keine {@code null}-Werte angezeigt werden.
-     *
-     * @param s Eingabestring
-     * @return leerer String bei {@code null}, sonst der String selbst
+     * Gibt nie null zurück (für Anzeige).
      */
     private String safe(String s) { return s == null ? "" : s; }
 
     /**
-     * Filtert die Eingabe für SVNR so, dass nur Ziffern erlaubt sind und maximal 10 Zeichen möglich sind.
+     * Filter: SVNR nur Ziffern, max 10.
      */
     private static class SvnrDocumentFilter extends DocumentFilter {
         @Override public void insertString(FilterBypass fb, int o, String s, AttributeSet a) throws BadLocationException {
@@ -587,8 +522,8 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Filtert die Eingabe für Telefonnummern, damit nur ein führendes '+' und danach nur Ziffern möglich sind.
-     * Zusätzlich wird eine maximale Länge erzwungen.
+     * Filter: Telefon erlaubt "+", dann Ziffern.
+     * Maximal-Länge wird geprüft.
      */
     private static class PlusDigitsFilter extends DocumentFilter {
         private final int maxLen;
@@ -610,12 +545,6 @@ public class PatientenAufnahme extends JFrame {
             else java.awt.Toolkit.getDefaultToolkit().beep();
         }
 
-        /**
-         * Prüft, ob der gegebene String eine gültige Teil-Eingabe für eine Telefonnummer ist.
-         *
-         * @param s aktueller Inhalt nach der geplanten Änderung
-         * @return {@code true}, wenn gültig, sonst {@code false}
-         */
         private boolean isValid(String s) {
             if (s.length() > maxLen) return false;
             return s.isEmpty() || s.equals("+") || s.matches("\\+\\d*");

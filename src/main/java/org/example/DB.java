@@ -31,13 +31,9 @@ public class DB {
     private static final String PASS = "geb24";
 
     /**
-     * Erstellt und liefert eine neue Verbindung zur Datenbank.
-     * <p>
-     * Die Verbindung wird über {@link DriverManager#getConnection(String, String, String)}
+     * Erstellt und liefert eine neue Verbindung zur Datenbank
      * aufgebaut. Das Schließen der Verbindung (z.B. in try-with-resources) ist Aufgabe
      * der aufrufenden Stelle.
-     * </p>
-     *
      * @return neue {@link Connection} zur Datenbank
      * @throws SQLException wenn keine Verbindung aufgebaut werden kann
      */
