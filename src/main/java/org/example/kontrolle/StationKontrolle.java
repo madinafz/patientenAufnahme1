@@ -14,13 +14,12 @@ import java.util.Map;
 public class StationKontrolle {
 
     /**
-     * Lädt alle Stationen aus der Datenbank
-     * <p>
+     * Lädt alle Stationen aus der Datenban
      * Datenbankzugriff wird an die CRUD-Klasse delegiert.
-     * </p>
      * @return Liste aller Stationen
      */
     public List<Station> getAllStations() {
+
         return new org.example.crud.StationCrud().findAll();
     }
 

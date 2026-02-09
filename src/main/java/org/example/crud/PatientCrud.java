@@ -134,7 +134,11 @@ public class PatientCrud {
 
             ps.setString(1, p.getFirstName());
             ps.setString(2, p.getLastName());
-            ps.setDate(3, p.getBirthDate() == null ? null : Date.valueOf(p.getBirthDate()));
+            if (p.getBirthDate() == null) {
+                ps.setDate(3, null);
+            } else {
+                ps.setDate(3, Date.valueOf(p.getBirthDate()));
+            }
             ps.setString(4, p.getSvnr());
             ps.setString(5, p.getPhone());
             ps.setString(6, p.getAddress());
@@ -174,7 +178,11 @@ public class PatientCrud {
 
             ps.setString(1, p.getFirstName());
             ps.setString(2, p.getLastName());
-            ps.setDate(3, p.getBirthDate() == null ? null : Date.valueOf(p.getBirthDate()));
+            if (p.getBirthDate() == null) {
+                ps.setDate(3, null);
+            } else {
+                ps.setDate(3, Date.valueOf(p.getBirthDate()));
+            }
             ps.setString(4, p.getSvnr());
             ps.setString(5, p.getPhone());
             ps.setString(6, p.getAddress());

@@ -127,7 +127,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Lädt Stationen und die Map, wenn sie noch fehlen.
+     * Lädt Stationen und die Map, wenn Sie noch fehlen.
      */
     private void ensureStationsLoaded() {
         if (stations == null || stations.isEmpty()) stations = sk.getAllStations();
@@ -135,7 +135,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Führt eine gemerkte Suche aus (nach dem Laden).
+     * führt eine gemerkte Suche aus (nach dem Laden).
      */
     private void runPendingQuery() {
         if (pendingQuery == null) return;
@@ -145,7 +145,7 @@ public class PatientenAufnahme extends JFrame {
     }
 
     /**
-     * Zeigt “Nicht gefunden” und bietet “Neu anlegen” an.
+     * Zeigt “Nicht gefunden” und bietet 'Neu anlegen' an.
      */
     private void showNotFoundWithCreate(String q) {
         Object[] options = {"Neu anlegen", "OK"};

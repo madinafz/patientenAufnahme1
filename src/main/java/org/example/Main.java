@@ -1,6 +1,5 @@
 package org.example;
 
-import org.example.PatientenAufnahme;
 
 import javax.swing.SwingUtilities;
 

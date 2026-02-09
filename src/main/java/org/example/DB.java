@@ -3,14 +3,11 @@ package org.example;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.SQLOutput;
 
 /**
  * Hilfsklasse für den Datenbankzugriff.
- * <p>
  * Diese Klasse kapselt die Verbindungsdaten (URL, Benutzer, Passwort) und stellt
  * eine zentrale Methode bereit, um eine JDBC-Verbindung zur Datenbank aufzubauen.
- * </p>
  */
 public class DB {
 
@@ -18,7 +15,7 @@ public class DB {
      * JDBC-URL zur MySQL-Datenbank inkl. benötigter Parameter.
      */
     private static final String URL =
-            "jdbc:mysql://10.25.2.145:3306/24abfa?useSSL=false&serverTimezone=UTC";
+            "jdbc:mysql://10.25.2.145:3306/24abfa";
 
     /**
      * Benutzername für den Datenbanklogin.

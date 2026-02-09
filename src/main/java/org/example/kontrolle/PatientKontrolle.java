@@ -33,6 +33,7 @@ public class PatientKontrolle {
      * @return Liste der gefundenen Patienten
      */
     public List<Patient> search(String query) {
+
         return crud.search(query);
     }
 
@@ -45,6 +46,7 @@ public class PatientKontrolle {
      * @throws IllegalArgumentException wenn Validierungsfehler auftreten
      */
     public void validateOnly(Patient p) {
+
         checkPatient(p);
     }
 
@@ -69,6 +71,7 @@ public class PatientKontrolle {
      * @param id ID vom zu löschenden Patienten
      */
     public void delete(int id) {
+
         crud.deleteById(id);
     }
 
@@ -125,6 +128,7 @@ public class PatientKontrolle {
      * @return, wenn leer, entweder true oder false
      */
     private boolean isEmpty(String s) {
+
         return s == null || s.isEmpty();
     }
 
